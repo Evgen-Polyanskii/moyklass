@@ -1,0 +1,20 @@
+{
+  "name": "moyklass",
+  "version": "0.0.1",
+  "description": "Веб-сервер для работы с данными учебных занятий",
+  "main": "index.js",
+  "engines": {
+    "node": "16.x",
+    "npm": "8.x"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Evgen-Polyanskii/testTask_volt_blog.git"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "\"Evgen-Polyanskii\",",
+  "license": "ISC",
+  "homepage": "https://github.com/Evgen-Polyanskii/testTask_volt_blog#readme"
+}
