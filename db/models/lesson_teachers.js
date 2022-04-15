@@ -5,7 +5,7 @@ module.exports = (sequelize, DataTypes) => {
 
   lessonTeachers.init({
     lesson_id: DataTypes.INTEGER,
-    student_id: DataTypes.INTEGER,
+    teacher_id: DataTypes.INTEGER,
   }, {
     sequelize,
     timestamps: false,

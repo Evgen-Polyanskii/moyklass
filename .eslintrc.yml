@@ -3,10 +3,16 @@ env:
   es2021: true
 extends:
   - "airbnb-base"
-plugins: []
+  - "plugin:mocha/recommended"
+  - "plugin:chai-friendly/recommended"
+plugins: [
+    "mocha",
+    "chai-friendly"
+]
 parserOptions:
   ecmaVersion: 12
   sourceType: module
 rules:
   no-console: 0
   import/extensions: 0
+  mocha/max-top-level-suites: ["warn", {limit: 2}]
