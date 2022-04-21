@@ -94,7 +94,6 @@ describe('test root', () => {
       .expect('content-type', /json/)
       .end((err, res) => {
         if (err) return done(err);
-        console.log(res.body);
         expect(res.body).to.be.an('array').and.lengthOf(2);
         return done();
       });
