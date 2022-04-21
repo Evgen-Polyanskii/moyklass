@@ -14,6 +14,18 @@ describe('test root', () => {
   });
 
   it('Positive case: GET /', (done) => {
+    request(app)
+      .get('/')
+      .expect(200)
+      .expect('content-type', /json/)
+      .end((err, res) => {
+        if (err) return done(err);
+        expect(res.body).to.be.an('array').and.lengthOf(5);
+        return done();
+      });
+  });
+
+  it('Positive case: GET / with params', (done) => {
     const params = {
       teacherIds: '1,2,3',
       status: 0,

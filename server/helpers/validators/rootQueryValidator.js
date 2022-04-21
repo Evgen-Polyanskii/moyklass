@@ -17,6 +17,7 @@ const schema = yup.object({
     },
   ),
   status: yup.number()
+    .integer()
     .min(0)
     .max(1),
   teacherIds: yup.string().test(
@@ -37,8 +38,8 @@ const schema = yup.object({
       return isValid || context.createError({ path: context.path, message: `${value}, it's not a number` });
     },
   ),
-  page: yup.number().positive(),
-  lessonsPerPage: yup.number().positive(),
+  page: yup.number().integer().positive(),
+  lessonsPerPage: yup.number().integer().positive(),
 });
 
 const validate = (fields) => {

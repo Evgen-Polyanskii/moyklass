@@ -1,4 +1,4 @@
-const { Op, literal } = require('sequelize');
+const { Op, literal, where } = require('sequelize');
 const _ = require('lodash');
 
 module.exports = (params, defaultQuery) => {
@@ -25,9 +25,10 @@ module.exports = (params, defaultQuery) => {
     studentsCount: (query, count) => {
       const newQuery = _.cloneDeep(query);
       const arrayOfCount = count.split(',');
-      newQuery.having = arrayOfCount.length === 1
-        ? literal(`count("student_id") = ${count}`)
-        : literal(`count("student_id") BETWEEN ${arrayOfCount[0]} AND ${arrayOfCount[1]}`);
+      newQuery.where = where(
+        literal('(SELECT COUNT("student_id") FROM "lesson_students" WHERE "lesson_id" = "Lesson"."id")'),
+        (arrayOfCount.length === 1) ? { [Op.eq]: arrayOfCount[0] } : { [Op.between]: arrayOfCount },
+      );
       return newQuery;
     },
     lessonsPerPage: (query, value) => {

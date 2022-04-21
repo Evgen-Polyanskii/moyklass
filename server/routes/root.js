@@ -2,7 +2,7 @@
 
 const _ = require('lodash');
 const LessonRepositories = require('../repositories/LessonRepositories.js');
-const validate = require('../helpers/validator.js');
+const validate = require('../helpers/validators/rootQueryValidator.js');
 
 module.exports = (app) => {
   app
@@ -14,47 +14,19 @@ module.exports = (app) => {
           return;
         }
 
-        const { studentsCount, ...otherParams } = req.body;
         const lessonRepositories = new LessonRepositories(app);
+        const lessons = await lessonRepositories.getAll(req.body);
 
-        const lessonsList = await lessonRepositories.getAll(otherParams);
-        const requiredLessons = [];
-
-        if (studentsCount) {
-          const lessonsId = lessonsList.map(({ id }) => id);
-          const lessonsWithRequiredNumOfStudents = await lessonRepositories
-            .getStudentCount(studentsCount, lessonsId);
-          const idLesWithRequireNumOfStudents = lessonsWithRequiredNumOfStudents
-            .map(({ lesson_id }) => lesson_id);
-          lessonsList.forEach(({ dataValues: lesson }) => {
-            const isRequiredNumberOfStudents = idLesWithRequireNumOfStudents.includes(lesson.id);
-            if (isRequiredNumberOfStudents) {
-              const visitStudents = lesson.students
-                .filter(({ lessonStudents }) => lessonStudents.visit);
-              const visitCount = visitStudents.length;
-              const students = lesson.students.map(({ dataValues: student }) => {
-                const isVisit = student.lessonStudents.visit;
-                return { id: student.id, name: student.name, visit: isVisit };
-              });
-              requiredLessons.push({ ...lesson, visitCount, students });
-            }
-          });
-        } else {
-          lessonsList.forEach(({ dataValues: lesson }) => {
-            const visitStudents = lesson.students
-              .filter(({ lessonStudents }) => lessonStudents.visit);
-            const visitCount = visitStudents.length;
-            const students = lesson.students.map(({ dataValues: student }) => {
-              const isVisit = student.lessonStudents.visit;
-              return { id: student.id, name: student.name, visit: isVisit };
-            });
-            requiredLessons.push({ ...lesson, visitCount, students });
-          });
-        }
-
+        const lessonsList = lessons.map(({ dataValues: lesson }) => {
+          const students = lesson.students.map(({ dataValues: student }) => ({
+            id: student.id,
+            name: student.name,
+            visit: student.lessonStudents.visit,
+          }));
+          return { ...lesson, students };
+        });
         res.set('Content-Type', 'application/json');
-        console.log('requiredLessons', JSON.stringify(requiredLessons, null, 2));
-        res.json(requiredLessons);
+        res.json(lessonsList);
       } catch (e) {
         res.status(500).json('Something went wrong, please try again');
         throw e;
