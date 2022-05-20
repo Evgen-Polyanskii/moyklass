@@ -6,11 +6,11 @@ const resource = '/lessons';
 
 module.exports = (app) => {
   app
-    .post(resource, async (req, res) => {
+    .post(resource, async (req, res, next) => {
       try {
         const errors = validate(req.body);
         if (!_.isEmpty(errors)) {
-          res.status(400).json(errors);
+          res.status(400).json({ errors });
           return;
         }
 
@@ -18,8 +18,8 @@ module.exports = (app) => {
         res.set('Content-Type', 'application/json')
           .status(200)
           .json(lessonIds);
-      } catch (e) {
-        res.send(500, 'Something went wrong, please try again');
+      } catch (err) {
+        next(err);
       }
     });
 };

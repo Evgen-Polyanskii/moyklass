@@ -37,7 +37,6 @@ describe('test root', () => {
       .expect(200)
       .expect('content-type', /json/);
 
-    console.log('lessonIds', lessonIds.body);
     const lessons = await db.Lesson.findAll({
       attributes: ['title', 'date', 'status'],
       where: { id: { [Op.in]: lessonIds.body } },
@@ -48,12 +47,10 @@ describe('test root', () => {
       },
       order: ['date'],
     });
-    console.log(lessons);
     expect(lessons).to.be.an('array').and.lengthOf(2);
     expect(lessons[0].date.toISOString()).to.equal('2022-04-24T00:00:00.000Z');
     expect(lessons[1].date.toISOString()).to.equal('2022-05-01T00:00:00.000Z');
     lessons.forEach(({ status }) => expect(status).to.be.equal(0));
-    console.log(lessons[0].teachers);
     const { teachers } = lessons[0];
     expect(teachers[0].id).to.equal(1);
     expect(teachers[0].lessonTeachers).to.include({
@@ -111,7 +108,7 @@ describe('test root', () => {
       .expect('content-type', /json/)
       .end((err, res) => {
         if (err) return done(err);
-        expect(res.body).to.be.an('array').and.lengthOf(2);
+        expect(res.body.errors).to.be.an('array').and.lengthOf(2);
         return done();
       });
   });

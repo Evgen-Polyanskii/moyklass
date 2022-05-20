@@ -99,8 +99,8 @@ describe('test root', () => {
       .expect(400)
       .end((err, res) => {
         if (err) return done(err);
-        expect(res.body).to.be.an('array').and.lengthOf(3);
-        res.body.forEach((e) => expect(e).to.have.any.keys('date', 'status', 'studentsCount'));
+        expect(res.body.errors).to.be.an('array').and.lengthOf(3);
+        res.body.errors.forEach((e) => expect(e).to.have.any.keys('date', 'status', 'studentsCount'));
         return done();
       });
   });
