@@ -1,84 +1,101 @@
 /*  eslint mocha/no-mocha-arrows: 0 */
+process.env.NODE_ENV = 'test';
 
 const request = require('supertest');
 const { expect } = require('chai');
 const { Op } = require('sequelize');
 const getApp = require('../server/index.js');
+const fixtures = require('./fixtures/index.js');
 const db = require('../db/models');
 
 describe('test root', () => {
-  let app;
-
   before((done) => {
-    app = getApp();
-    db.sequelize.authenticate().then(() => done()).catch((e) => done(e));
+    this.app = getApp();
+    db.sequelize.authenticate()
+      .then(() => db.sequelize.sync({ force: true, logging: false }))
+      .then(() => db.Student.bulkCreate(fixtures.getStudentsData()))
+      .then(() => db.Teacher.bulkCreate(fixtures.getTeachersData()))
+      .then(() => db.Lesson.bulkCreate(fixtures.getLessonsData()))
+      .then(() => db.lessonTeachers.bulkCreate(fixtures.getLessonTeachersData()))
+      .then(() => db.lessonStudents.bulkCreate(fixtures.getLessonStudentsData()))
+      .then(() => done())
+      .catch((e) => done(e));
   });
 
-  it('Positive case: GET /lessons with lessonsCount', async () => {
+  it('Positive case: POST /lessons with lessonsCount', async () => {
     const params = {
       title: 'Blue Ocean',
-      teacherIds: [1, 4],
+      teacherIds: [1],
       firstDate: '2022-04-19',
-      days: [0, 1, 6],
-      lessonsCount: 1,
+      days: [0],
+      lessonsCount: 2,
     };
 
-    const lessonIds = await request(app)
+    const lessonIds = await request(this.app)
       .post('/lessons')
       .send(params)
       .expect(200)
       .expect('content-type', /json/);
 
+    console.log('lessonIds', lessonIds.body);
     const lessons = await db.Lesson.findAll({
-      attributes: ['id', 'title', 'date', 'status'],
-      where: { id: { [Op.eq]: lessonIds.body } },
+      attributes: ['title', 'date', 'status'],
+      where: { id: { [Op.in]: lessonIds.body } },
       include: {
         attributes: ['id'],
         model: db.Teacher,
         as: 'teachers',
       },
+      order: ['date'],
     });
-    expect(lessons).to.be.an('array').and.lengthOf(1);
-    expect(lessons[0]).to.include({ title: params.title, status: 0, date: '2022-04-23' });
+    console.log(lessons);
+    expect(lessons).to.be.an('array').and.lengthOf(2);
+    expect(lessons[0].date.toISOString()).to.equal('2022-04-24T00:00:00.000Z');
+    expect(lessons[1].date.toISOString()).to.equal('2022-05-01T00:00:00.000Z');
+    lessons.forEach(({ status }) => expect(status).to.be.equal(0));
+    console.log(lessons[0].teachers);
     const { teachers } = lessons[0];
+    expect(teachers[0].id).to.equal(1);
     expect(teachers[0].lessonTeachers).to.include({
-      lesson_id: lessons[0].id, teacher_id: params.teacherIds[0],
-    });
-    expect(teachers[1].lessonTeachers).to.include({
-      lesson_id: lessons[0].id, teacher_id: params.teacherIds[1],
+      lesson_id: lessonIds.body[0], teacher_id: params.teacherIds[0],
     });
   });
 
-  it('Positive case: GET /lessons with lastDate', async () => {
+  it('Positive case: POST /lessons with lastDate', async () => {
     const params = {
       title: 'Blue Ocean',
-      teacherIds: [2, 3],
-      firstDate: '2022-05-01',
-      days: [0],
-      lastDate: '2022-05-29',
+      teacherIds: [1, 2],
+      firstDate: '2022-03-31',
+      days: [4, 2],
+      lastDate: '2022-04-06',
     };
 
-    const lessonIds = await request(app)
+    const lessonIds = await request(this.app)
       .post('/lessons')
       .send(params)
       .expect(200)
       .expect('content-type', /json/);
+
     const lessons = await db.Lesson.findAll({
-      attributes: ['date'],
+      attributes: ['title', 'date', 'status'],
       where: { id: { [Op.in]: lessonIds.body } },
-      raw: true,
+      include: {
+        attributes: ['id'],
+        model: db.Teacher,
+        as: 'teachers',
+      },
+      order: ['date'],
     });
-    expect(lessons).to.be.an('array').and.lengthOf(5);
-    lessons.forEach(({ date }) => expect(date).to.be.oneOf([
-      '2022-05-01',
-      '2022-05-08',
-      '2022-05-15',
-      '2022-05-22',
-      '2022-05-29',
-    ]));
+
+    expect(lessons).to.be.an('array').and.lengthOf(2);
+    expect(lessons[0].date.toISOString()).to.equal('2022-03-31T00:00:00.000Z');
+    expect(lessons[1].date.toISOString()).to.equal('2022-04-05T00:00:00.000Z');
+    lessons.forEach(({ title }) => expect(title).to.equal('Blue Ocean'));
+    expect(lessons[0].teachers).to.be.an('array').and.lengthOf(2);
+    expect(lessons[1].teachers).to.be.an('array').and.lengthOf(2);
   });
 
-  it('Negative case: GET /lessons', (done) => {
+  it('Negative case: POST /lessons', (done) => {
     const params = {
       title: 'Blue Ocean',
       teacherIds: [1, 4],
@@ -87,7 +104,7 @@ describe('test root', () => {
       lessonsCount: 0,
     };
 
-    request(app)
+    request(this.app)
       .post('/lessons')
       .send(params)
       .expect(400)

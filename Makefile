@@ -6,6 +6,10 @@ prepare:
 install:
 	npm install
 
+db-reset:
+	dropdb moyklass || true
+	createdb moyklass
+
 data-load:
 	psql moyklass < test.sql
 

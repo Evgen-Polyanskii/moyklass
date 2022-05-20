@@ -4,22 +4,22 @@ const dayjs = require('dayjs');
 const createLessons = ({
   title, days, firstDate, lessonsCount, lastDate,
 }) => {
+  const sortDays = days.sort();
   const startDate = dayjs(Date.parse(firstDate));
   const maxCountLessons = 300;
   const maxFinishDate = startDate.add(1, 'year');
   let currentDate = startDate;
   let createdLessonsCount = 0;
 
-  const useLessonsCount = !_.isUndefined(lessonsCount);
   const lessons = [];
 
-  if (useLessonsCount) {
+  if (!_.isUndefined(lessonsCount)) {
     while (
-      currentDate < maxFinishDate
+      currentDate <= maxFinishDate
       && createdLessonsCount < maxCountLessons
       && createdLessonsCount < lessonsCount
     ) {
-      days.forEach((day) => {
+      sortDays.forEach((day) => {
         const date = currentDate.set('day', day);
         if (
           createdLessonsCount >= lessonsCount
@@ -35,7 +35,7 @@ const createLessons = ({
         });
       });
 
-      currentDate = currentDate.add(1, 'week');
+      currentDate = currentDate.add(1, 'week').set('day', 0);
     }
     return lessons;
   }
@@ -46,7 +46,7 @@ const createLessons = ({
     && createdLessonsCount < maxCountLessons
     && currentDate <= maxFinishDate
   ) {
-    days.forEach((day) => {
+    sortDays.forEach((day) => {
       const date = currentDate.set('day', day);
       if (
         date > finishDate
@@ -62,7 +62,7 @@ const createLessons = ({
         date: date.toISOString(),
       });
     });
-    currentDate = currentDate.add(1, 'week');
+    currentDate = currentDate.add(1, 'week').set('day', 0);
   }
   return lessons;
 };

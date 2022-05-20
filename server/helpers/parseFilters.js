@@ -1,13 +1,13 @@
-const { Op, literal, where } = require('sequelize');
+const { Op, literal } = require('sequelize');
 const _ = require('lodash');
 
 module.exports = (params, defaultQuery) => {
   const filterKeys = {
-    date: (query, date) => {
+    date: (query, dates) => {
       const newQuery = _.cloneDeep(query);
-      const arrayOfDate = date.split(',');
+      const arrayOfDate = dates.split(',').map((date) => new Date(date.trim()));
       newQuery.where.date = arrayOfDate.length === 1
-        ? date : { [Op.between]: arrayOfDate };
+        ? arrayOfDate[0] : { [Op.between]: arrayOfDate.sort() };
       return newQuery;
     },
     status: (query, value) => {
@@ -18,17 +18,15 @@ module.exports = (params, defaultQuery) => {
     teacherIds: (query, ids) => {
       const newQuery = _.cloneDeep(query);
       const arrayOfIds = ids.split(',');
-      newQuery.include[0].where = arrayOfIds.length === 1
-        ? { id: arrayOfIds[0] } : { id: { [Op.in]: arrayOfIds } };
+      newQuery.where.teacher_id = { [Op.in]: arrayOfIds };
       return newQuery;
     },
     studentsCount: (query, count) => {
       const newQuery = _.cloneDeep(query);
       const arrayOfCount = count.split(',');
-      newQuery.where = where(
-        literal('(SELECT COUNT("student_id") FROM "lesson_students" WHERE "lesson_id" = "Lesson"."id")'),
-        (arrayOfCount.length === 1) ? { [Op.eq]: arrayOfCount[0] } : { [Op.between]: arrayOfCount },
-      );
+      const having = arrayOfCount.length > 1
+        ? `BETWEEN ${arrayOfCount[0]} AND ${arrayOfCount[1]}` : `= ${arrayOfCount[0]}`;
+      newQuery.having = literal(`COUNT(*) ${having}`);
       return newQuery;
     },
     lessonsPerPage: (query, value) => {
@@ -44,5 +42,8 @@ module.exports = (params, defaultQuery) => {
   };
 
   return Object.entries(params)
-    .reduce((query, [key, value]) => filterKeys[key](query, value), defaultQuery);
+    .reduce((query, [key, value]) => {
+      if (_.isUndefined(value)) return query;
+      return filterKeys[key](query, value);
+    }, defaultQuery);
 };

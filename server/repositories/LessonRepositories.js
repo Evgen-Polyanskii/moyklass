@@ -1,21 +1,16 @@
-const { literal } = require('sequelize');
+const { Op } = require('sequelize');
 const parseFilters = require('../helpers/parseFilters.js');
-const createLessons = require('../helpers/createLessons.js');
 
 class LessonRepositories {
-  constructor(app) {
-    this.models = app.get('models');
+  constructor(models) {
+    this.models = models;
   }
 
-  async getAll(params) {
+  async getAll(lessonIds, params) {
     const defaultQuery = {
-      attributes: {
-        include: [
-          [literal(`(SELECT COUNT("visit") FROM "lesson_students" 
-          WHERE "lesson_id" = "Lesson"."id" AND "visit" = true)`), 'visitCount'],
-        ],
+      where: {
+        id: { [Op.in]: lessonIds },
       },
-      where: {},
       include: [
         {
           model: this.models.Teacher,
@@ -34,24 +29,71 @@ class LessonRepositories {
           require: true,
         },
       ],
-      limit: 5,
-      offset: 0,
     };
 
     const query = parseFilters(params, defaultQuery);
     return this.models.Lesson.findAll(query);
   }
 
-  async createLessons(params) {
+  async getLessons(params, attributes) {
+    const defaultQuery = {
+      attributes,
+      where: {},
+      raw: true,
+    };
+
+    const query = parseFilters(params, defaultQuery);
+    return this.models.Lesson.findAll(query);
+  }
+
+  async getLessonsWithRequiredTeachers(params, lessonsIds) {
+    const defaultQuery = {
+      attributes: ['lesson_id'],
+      where: {
+        lesson_id: {
+          [Op.in]: lessonsIds,
+        },
+      },
+      raw: true,
+    };
+
+    const query = parseFilters(params, defaultQuery);
+    return this.models.lessonTeachers.findAll(query);
+  }
+
+  async getLessonsWithRequiredCountStudents(params, lessonsIds) {
+    const defaultQuery = {
+      attributes: ['lesson_id'],
+      where: {
+        lesson_id: {
+          [Op.in]: lessonsIds,
+        },
+      },
+      group: ['lesson_id'],
+      raw: true,
+    };
+
+    const query = parseFilters(params, defaultQuery);
+    return this.models.lessonStudents.findAll(query);
+  }
+
+  async createLessons(lessonList, teacherIds) {
     const t = await this.models.sequelize.transaction();
     try {
-      const { teacherIds, ...otherParams } = params;
-      const newLessons = createLessons(otherParams);
-      const lessons = await this.models.Lesson.bulkCreate(newLessons, { transaction: t });
-      const lessonsIds = await Promise.all(lessons.map(async (lesson) => {
-        await lesson.setTeachers(teacherIds, { transaction: t });
-        return lesson.id;
-      }));
+      const lessons = await this.models.Lesson
+        .bulkCreate(lessonList, { validate: true, transaction: t });
+      const lessonsIds = lessons.map(({ id }) => id);
+      const lessonTeachers = lessonsIds.reduce((acc, lessonId) => {
+        teacherIds.forEach((teacherId) => {
+          acc.push({
+            lesson_id: lessonId,
+            teacher_id: teacherId,
+          });
+        });
+        return acc;
+      }, []);
+      await this.models.lessonTeachers
+        .bulkCreate(lessonTeachers, { validate: true, transaction: t });
       await t.commit();
       return lessonsIds;
     } catch (e) {
